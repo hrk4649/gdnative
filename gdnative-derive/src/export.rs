@@ -1,3 +1,4 @@
+use crate::crate_gdnative_core;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use syn::spanned::Spanned;
 use syn::{DeriveInput, Fields};
@@ -44,21 +45,23 @@ fn impl_export(enum_ty: &syn::Ident, data: &syn::DataEnum) -> syn::Result<TokenS
             quote! { (stringify!(#key).to_string(), #val) }
         })
         .collect::<Vec<_>>();
+    let gdnative_core = crate_gdnative_core();
 
     let impl_block = quote! {
-        impl ::gdnative::export::Export for #enum_ty {
-            type Hint = ::gdnative::export::hint::IntHint<i64>;
-            #[inline]
-            fn export_info(hint: Option<Self::Hint>) -> ::gdnative::export::ExportInfo {
-                if let Some(hint) = hint {
-                    return hint.export_info();
-                } else {
+        const _: () = {
+            pub enum NoHint {}
+
+            impl #gdnative_core::export::Export for #enum_ty {
+                type Hint = NoHint;
+
+                #[inline]
+                fn export_info(_hint: Option<Self::Hint>) -> #gdnative_core::export::ExportInfo {
                     let mappings = vec![ #(#mappings),* ];
-                    let enum_hint = ::gdnative::export::hint::EnumHint::with_numbers(mappings);
-                    return ::gdnative::export::hint::IntHint::<i64>::Enum(enum_hint).export_info();
+                    let enum_hint = #gdnative_core::export::hint::EnumHint::with_values(mappings);
+                    return #gdnative_core::export::hint::IntHint::<i64>::Enum(enum_hint).export_info();
                 }
             }
-        }
+        };
     };
 
     Ok(impl_block)

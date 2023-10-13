@@ -1,6 +1,6 @@
 //! Strongly typed property hints.
 
-use std::fmt::{self, Write};
+use std::fmt::{self, Display, Write};
 use std::ops::RangeInclusive;
 
 use crate::core_types::GodotString;
@@ -116,21 +116,21 @@ where
 /// ```
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
 pub struct EnumHint {
-    values: Vec<(String, Option<i64>)>,
+    values: Vec<EnumHintEntry>,
 }
 
 impl EnumHint {
     #[inline]
     pub fn new(values: Vec<String>) -> Self {
-        let values = values.into_iter().map(|v| (v, None)).collect();
+        let values = values.into_iter().map(EnumHintEntry::new).collect();
         EnumHint { values }
     }
 
     #[inline]
-    pub fn with_numbers(values: Vec<(String, i64)>) -> Self {
+    pub fn with_values(values: Vec<(String, i64)>) -> Self {
         let values = values
             .into_iter()
-            .map(|(key, val)| (key, Some(val)))
+            .map(|(key, value)| EnumHintEntry::with_value(key, value))
             .collect();
         EnumHint { values }
     }
@@ -140,25 +140,49 @@ impl EnumHint {
         let mut s = String::new();
 
         let mut iter = self.values.iter();
-        let write_item = |s: &mut String, item: &(String, Option<i64>)| match item {
-            (key, Some(val)) => {
-                write!(s, "{key}:{val}")
-            }
-            (key, None) => {
-                write!(s, "{key}")
-            }
-        };
 
         if let Some(first) = iter.next() {
-            write_item(&mut s, first).unwrap();
+            write!(s, "{first}").unwrap();
         }
 
         for rest in iter {
             write!(s, ",").unwrap();
-            write_item(&mut s, rest).unwrap();
+            write!(s, "{rest}").unwrap();
         }
 
         s.into()
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct EnumHintEntry {
+    key: String,
+    value: Option<i64>,
+}
+
+impl EnumHintEntry {
+    #[inline]
+    pub fn new(key: String) -> Self {
+        Self { key, value: None }
+    }
+
+    #[inline]
+    pub fn with_value(key: String, value: i64) -> Self {
+        Self {
+            key,
+            value: Some(value),
+        }
+    }
+}
+
+impl Display for EnumHintEntry {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.key)?;
+        if let Some(value) = self.value {
+            write!(f, ":{}", value)?;
+        }
+        Ok(())
     }
 }
 
@@ -495,6 +519,6 @@ godot_test!(test_enum_hint_without_mapping {
 });
 
 godot_test!(test_enum_hint_with_mapping {
-    let hint = EnumHint::with_numbers(vec![("Foo".into(), 42), ("Bar".into(), 67)]);
+    let hint = EnumHint::with_values(vec![("Foo".into(), 42), ("Bar".into(), 67)]);
     assert_eq!(hint.to_godot_hint_string().to_string(), "Foo:42,Bar:67".to_string(),);
 });
