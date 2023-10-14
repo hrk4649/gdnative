@@ -29,12 +29,8 @@ impl Hud {
     pub fn show_game_over(&self, owner: &CanvasLayer) {
         self.show_message(owner, "Game Over".into());
 
-        let message_label = unsafe { owner.get_node_as::<Label>("message_label").unwrap() };
-        message_label.set_text("Dodge the\nCreeps!");
-        message_label.show();
-
-        let button = unsafe { owner.get_node_as::<Button>("start_button").unwrap() };
-        button.show();
+        let timer = unsafe { owner.get_node_as::<Timer>("gameover_timer").unwrap() };
+        timer.start(0.0);
     }
 
     #[method]
@@ -54,5 +50,15 @@ impl Hud {
     fn on_message_timer_timeout(&self, #[base] owner: &CanvasLayer) {
         let message_label = unsafe { owner.get_node_as::<Label>("message_label").unwrap() };
         message_label.hide()
+    }
+
+    #[method]
+    pub fn on_gameover_timer_timeout(&self, #[base] owner: &CanvasLayer) {
+        let message_label = unsafe { owner.get_node_as::<Label>("message_label").unwrap() };
+        message_label.set_text("Dodge the\nCreeps!");
+        message_label.show();
+
+        let button = unsafe { owner.get_node_as::<Button>("start_button").unwrap() };
+        button.show();
     }
 }
